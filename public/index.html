@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GitLab API Web</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill='%23e2432a' d='M8 15 1 9.8l1.3-4.2L4 1l1.7 4.6h4.6L12 1l1.7 4.6L15 9.8z'/></svg>" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 15 1 9.8l1.3-4.2L4 1l1.7 4.6h4.6L12 1l1.7 4.6L15 9.8z" /></svg>
+        <span>GitLab API Web</span>
+      </div>
+      <div class="connection" id="connection">
+        <span class="dot" id="connDot"></span>
+        <span id="connText">Не настроено</span>
+      </div>
+      <button class="btn" id="openSettings" type="button">Настройки</button>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="presets" role="tab" type="button">Пресеты</button>
+          <button class="tab" data-tab="history" role="tab" type="button">История</button>
+        </div>
+        <input class="input sidebar-filter" id="presetFilter" type="search" placeholder="Фильтр…" />
+        <nav class="tab-panel" id="presetsPanel"></nav>
+        <div class="tab-panel hidden" id="historyPanel">
+          <ul class="history" id="historyList"></ul>
+          <button class="btn btn-ghost btn-small" id="clearHistory" type="button">Очистить историю</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <form class="request card" id="requestForm" autocomplete="off">
+          <div class="request-line">
+            <select class="input method" id="method">
+              <option>GET</option>
+              <option>POST</option>
+              <option>PUT</option>
+              <option>PATCH</option>
+              <option>DELETE</option>
+            </select>
+            <div class="path-wrap">
+              <span class="path-prefix" id="pathPrefix">/api/v4</span>
+              <input class="input path" id="path" placeholder="/projects" spellcheck="false" />
+            </div>
+            <button class="btn" id="fetchAllBtn" type="button" title="Пройти по всем страницам и собрать результат в один массив">Все страницы</button>
+            <button class="btn btn-primary" id="sendBtn" type="submit">Отправить</button>
+          </div>
+
+          <section class="section hidden" id="pathParamsSection">
+            <h3>Параметры пути</h3>
+            <div class="kv" id="pathParams"></div>
+          </section>
+
+          <section class="section">
+            <div class="section-head">
+              <h3>Query-параметры</h3>
+              <button class="btn btn-ghost btn-small" id="addQuery" type="button">+ Добавить</button>
+            </div>
+            <div class="kv" id="queryParams"></div>
+          </section>
+
+          <section class="section" id="bodySection">
+            <div class="section-head">
+              <h3>Тело (JSON)</h3>
+              <button class="btn btn-ghost btn-small" id="formatBody" type="button">Форматировать</button>
+            </div>
+            <textarea class="input code" id="body" rows="6" spellcheck="false" placeholder='{ "title": "..." }'></textarea>
+            <div class="error-text" id="bodyError"></div>
+          </section>
+          <div class="hint">⌘/Ctrl + Enter — отправить</div>
+        </form>
+
+        <section class="response card" id="response">
+          <div class="response-head">
+            <span class="status" id="respStatus">—</span>
+            <span class="meta" id="respMeta"></span>
+            <div class="spacer"></div>
+            <div class="pager hidden" id="pager">
+              <button class="btn btn-small" id="prevPage" type="button">← Пред.</button>
+              <span class="meta" id="pageInfo"></span>
+              <button class="btn btn-small" id="nextPage" type="button">След. →</button>
+            </div>
+            <button class="btn btn-small" id="copyResp" type="button">Копировать</button>
+            <button class="btn btn-small" id="downloadResp" type="button">Скачать JSON</button>
+          </div>
+          <div class="resp-url" id="respUrl"></div>
+          <details class="resp-headers hidden" id="respHeadersWrap">
+            <summary>Заголовки</summary>
+            <table id="respHeaders"></table>
+          </details>
+          <pre class="code-view" id="respBody"><span class="muted">Ответ появится здесь. Выберите пресет слева или введите путь.</span></pre>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="dialog" id="settingsDialog">
+      <form method="dialog" id="settingsForm" autocomplete="off">
+        <h2>Настройки подключения</h2>
+        <label class="field">
+          <span>URL GitLab</span>
+          <input class="input" id="baseUrl" placeholder="https://gitlab.com" required />
+          <small>Адрес инстанса, без /api/v4</small>
+        </label>
+        <label class="field">
+          <span>Personal Access Token</span>
+          <input class="input" id="token" type="password" placeholder="glpat-…" />
+          <small id="tokenHint">GitLab → Preferences → Access Tokens, scope <code>api</code> или <code>read_api</code></small>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="allowSelfSigned" />
+          <span>Разрешить self-signed сертификат (не проверять TLS)</span>
+        </label>
+        <div class="test-result" id="testResult"></div>
+        <div class="dialog-actions">
+          <button class="btn btn-ghost" id="forgetToken" type="button">Удалить токен</button>
+          <div class="spacer"></div>
+          <button class="btn" id="testConn" type="button">Проверить</button>
+          <button class="btn" value="cancel" formnovalidate type="submit">Закрыть</button>
+          <button class="btn btn-primary" id="saveSettings" type="button">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status"></div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
